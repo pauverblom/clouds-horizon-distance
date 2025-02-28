@@ -17,13 +17,16 @@ A more detailed guide will soon be available on www.francescogola.net/blog.
 For the proper functioning of the plugin, the following open-source services were used:
 
     •   SunCalc: for calculating sunrise and sunset lines.
-    •   Open-Elevation: to obtain the elevation of the selected point.
+    •   Open-Meteo: to obtain the elevation of the selected point.
 
 I am not a meteorologist (and probably not even a photographer), so all constructive comments and contributions to improve this plugin are welcome!
 
 If you need further assistance or another translation, feel free to ask!
 
 # CHANGELOG
+-   0.6
+    -   Replaced Elevation system with Open-Meteo as Open-Elevation was unreliable (so plugin was not working)
+    -   Completion code rewritten and optimized for greater stability and speed
 -   0.5
     -   First public Beta
 -   0.4.5
