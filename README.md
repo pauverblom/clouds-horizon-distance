@@ -10,9 +10,9 @@ Once the plugin is activated, clicking on a point on the map captures the coordi
 
 At this point, using a bit of trigonometry, the plugin calculates and draws concentric rings on the map that represent the sunset horizons for high, medium, and low clouds at different base altitudes. Essentially, it calculates the distance at which a cloud at a specific altitude crosses the horizon line for an observer at a specific elevation.
 
-By utilizing Windy.com’s high, medium, and low cloud layers, it becomes possible to visually verify if the light will be blocked by the clouds: if a cloud intersects its sunset horizon, the sunlight will be blocked. (actually, high clouds almost never block the light, so it's more an indication for colouring chanches of this specific layer)
+By utilizing Windy.com’s high, medium, and low cloud layers, it becomes possible to visually verify if the light will be blocked by the clouds at sunrise or sunset: if a cloud intersects its sunset horizon, the sunlight will be blocked. (actually, high clouds almost never block the light, so it's more an indication for colouring chanches of this specific layer)
 
-A more detailed guide will soon be available on www.francescogola.net/blog.
+A more detailed guide is available on www.francescogola.net/blog.
 
 For the proper functioning of the plugin, the following open-source services were used:
 
@@ -24,6 +24,23 @@ I am not a meteorologist (and probably not even a photographer), so all construc
 If you need further assistance or another translation, feel free to ask!
 
 # CHANGELOG
+-   0.9
+    - Mobile version compatible!!
+    - Adaptive rings: now if you select a specific clouds layer, the plugin will show you the rings only for that clouds layer 
+    - Code tuned for the new Leaflet-gl Windy.com plugin ecosystem 
+-   0.8
+    - Sun path: is now possible to track the sun azimuth during the day
+    - Live Sun: you can now check where clouds will obstruct the sun during the day and not only at sunrise and sunset
+-   0.7
+    - Implemented new Earth curvature formula for higher geometric accuracy
+    - Full precision coordinates for calculations
+    - Elevation caching to reduce API calls
+    - Cleaner and more stable rendering
+    - Improved label positioning
+    - Reduced visual clutter
+    - Code structure improvements
+    - More robust elevation handling
+    - Improved internal precision and consistency
 -   0.6
     -   Replaced Elevation system with Open-Meteo as Open-Elevation was unreliable (so plugin was not working)
     -   Completion code rewritten and optimized for greater stability and speed
