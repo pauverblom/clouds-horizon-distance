@@ -24,7 +24,7 @@ I am not a meteorologist (and probably not even a photographer), so all construc
 If you need further assistance or another translation, feel free to ask!
 
 # CHANGELOG
--   0.9.1
+-   0.9.2
     - Mobile version compatible!!
     - Adaptive rings: now if you select a specific clouds layer, the plugin will show you the rings only for that clouds layer 
     - Code tuned for the new Leaflet-gl Windy.com plugin ecosystem 
