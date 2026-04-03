@@ -24,6 +24,11 @@ I am not a meteorologist (and probably not even a photographer), so all construc
 If you need further assistance or another translation, feel free to ask!
 
 # CHANGELOG
+-   0.9.5
+    - Horizon distance formula accuracy improved
+    - Fixed active cloud layer not being read on plugin startup
+    - Elevation fetch error is now shown in the UI
+    - Minor code optimizations
 -   0.9.2
     - Mobile version compatible!!
     - Adaptive rings: now if you select a specific clouds layer, the plugin will show you the rings only for that clouds layer 

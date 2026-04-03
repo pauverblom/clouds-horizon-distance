@@ -6,7 +6,6 @@
 
     import { isMobileOrTablet } from '@windy/rootScope';
 
-console.log('IS MOBILE?', isMobileOrTablet);
 
     const OBSERVER_HEIGHT_METERS = 1.7;
 
@@ -40,6 +39,7 @@ console.log('IS MOBILE?', isMobileOrTablet);
     const isLiveSunEnabled = () => activeSunMode === 'liveSun';
 
     let elevationMeters = 0;
+    let elevationError = false;
     let sunriseTime = '';
     let sunsetTime = '';
 
@@ -52,7 +52,6 @@ console.log('IS MOBILE?', isMobileOrTablet);
     };
 
     // Live Sun values for the info box
-    let liveSunAzimuthDeg = 0;
     let liveSunAltitudeDeg = 0;
 
     let liveLowMinKm: number | null = null;
@@ -150,8 +149,10 @@ let liveSunSegments: any[] = [];
     }
 
     function calculateHorizonDistanceKm(elevMeters: number, cloudMeters: number): number {
-        const heightKm = (elevMeters + OBSERVER_HEIGHT_METERS + cloudMeters) / 1000;
-        return Math.sqrt(2 * EARTH_RADIUS_KM * heightKm + heightKm * heightKm);
+        const hObsKm = (elevMeters + OBSERVER_HEIGHT_METERS) / 1000;
+        const hCloudKm = cloudMeters / 1000;
+        return Math.sqrt(2 * EARTH_RADIUS_KM * hObsKm + hObsKm * hObsKm) +
+               Math.sqrt(2 * EARTH_RADIUS_KM * hCloudKm + hCloudKm * hCloudKm);
     }
 
     function calculateAzimuthDegrees(lat: number, lon: number, time: Date): number {
@@ -669,8 +670,9 @@ let liveSunSegments: any[] = [];
     lastDrawnTsMs = timestampMs;
 }
 
-    function scheduleCurrentSunUpdate(rawTs: any) {
-        if (!isSunPathEnabled()) return;
+    function scheduleSunUpdate(rawTs: any) {
+        const mode = activeSunMode;
+        if (mode === null) return;
         if (lastClickedLat === null || lastClickedLon === null) return;
 
         const tsMs = normalizeTimestampMs(rawTs);
@@ -685,45 +687,22 @@ let liveSunSegments: any[] = [];
             isTickScheduled = false;
             pendingSunUpdateTimer = null;
 
-            if (!isSunPathEnabled()) return;
+            if (activeSunMode !== mode) return;
             if (latestPendingTsMs === null) return;
 
-            drawOrUpdateCurrentSunLine(
-                lastClickedLat as number,
-                lastClickedLon as number,
-                latestPendingTsMs,
-                lastDistanceRefKm
-            );
-
-            if (latestPendingTsMs !== null && lastDrawnTsMs !== null && latestPendingTsMs !== lastDrawnTsMs) {
-                scheduleCurrentSunUpdate(latestPendingTsMs);
+            if (mode === 'sunPath') {
+                drawOrUpdateCurrentSunLine(
+                    lastClickedLat as number,
+                    lastClickedLon as number,
+                    latestPendingTsMs,
+                    lastDistanceRefKm
+                );
+            } else {
+                drawOrUpdateLiveSun(lastClickedLat as number, lastClickedLon as number, latestPendingTsMs);
             }
-        }, SUN_UPDATE_INTERVAL_MS);
-    }
-
-    function scheduleLiveSunUpdate(rawTs: any) {
-        if (!isLiveSunEnabled()) return;
-        if (lastClickedLat === null || lastClickedLon === null) return;
-
-        const tsMs = normalizeTimestampMs(rawTs);
-        if (tsMs === null) return;
-
-        latestPendingTsMs = tsMs;
-
-        if (isTickScheduled) return;
-        isTickScheduled = true;
-
-        pendingSunUpdateTimer = window.setTimeout(() => {
-            isTickScheduled = false;
-            pendingSunUpdateTimer = null;
-
-            if (!isLiveSunEnabled()) return;
-            if (latestPendingTsMs === null) return;
-
-            drawOrUpdateLiveSun(lastClickedLat as number, lastClickedLon as number, latestPendingTsMs);
 
             if (latestPendingTsMs !== null && lastDrawnTsMs !== null && latestPendingTsMs !== lastDrawnTsMs) {
-                scheduleLiveSunUpdate(latestPendingTsMs);
+                scheduleSunUpdate(latestPendingTsMs);
             }
         }, SUN_UPDATE_INTERVAL_MS);
     }
@@ -746,13 +725,13 @@ let liveSunSegments: any[] = [];
             const tsMs = normalizeTimestampMs(ts);
 
             if (tsMs !== null) {
-                scheduleCurrentSunUpdate(tsMs);
+                scheduleSunUpdate(tsMs);
                 return;
             }
 
             attempts += 1;
             if (attempts >= INITIAL_TS_RETRY_MAX_ATTEMPTS) {
-                scheduleCurrentSunUpdate(Date.now());
+                scheduleSunUpdate(Date.now());
                 return;
             }
 
@@ -777,8 +756,8 @@ let liveSunSegments: any[] = [];
         const sunOn = isSunPathEnabled();
         const liveOn = isLiveSunEnabled();
 
-        extBtnSunPath.setAttribute('ariaPressed', sunOn ? 'true' : 'false');
-        extBtnLiveSun.setAttribute('ariaPressed', liveOn ? 'true' : 'false');
+        extBtnSunPath.setAttribute('aria-pressed', sunOn ? 'true' : 'false');
+        extBtnLiveSun.setAttribute('aria-pressed', liveOn ? 'true' : 'false');
 
         extWrap.style.opacity = '1';
 
@@ -850,7 +829,7 @@ function resetSunScheduler() {
                 ? (store as any).get('timestamp')
                 : Date.now();
 
-            scheduleLiveSunUpdate(ts);
+            scheduleSunUpdate(ts);
         }
 
         updateExternalButtonsUi();
@@ -1124,6 +1103,7 @@ function resetSunScheduler() {
     const lonRaw = event.latlng.lng as number;
 
     try {
+        elevationError = false;
         elevationMeters = await getElevationMeters(latRaw, lonRaw);
 
         distancesKm = {
@@ -1149,7 +1129,7 @@ function resetSunScheduler() {
             clearCurrentSunLine();
 
             const ts = store && (store as any).get ? (store as any).get('timestamp') : Date.now();
-            scheduleLiveSunUpdate(ts);
+            scheduleSunUpdate(ts);
             return;
         }
 
@@ -1175,6 +1155,7 @@ function resetSunScheduler() {
         clearLiveSunOverlays();
     } catch (err: any) {
         console.error('Click processing failed', err);
+        elevationError = true;
     }
 }
 
@@ -1236,8 +1217,7 @@ function onOverlayChange(next: any) {
 }
 
     function onTimestampChange(ts: any) {
-        scheduleCurrentSunUpdate(ts);
-        scheduleLiveSunUpdate(ts);
+        scheduleSunUpdate(ts);
     }
 
     function initWhenReady() {
@@ -1250,8 +1230,6 @@ function onOverlayChange(next: any) {
             createExternalSunControls();
         }
 
-        startOverlayDebug();
-
         try {
             (map as any).on('click', onMapClick);
         } catch (e) {
@@ -1261,6 +1239,11 @@ function onOverlayChange(next: any) {
             try {
                 (store as any).on('timestamp', onTimestampChange);
                 (store as any).on('overlay', onOverlayChange);
+
+                const currentOverlay = (store as any).get ? (store as any).get('overlay') : null;
+                if (typeof currentOverlay === 'string' && currentOverlay) {
+                    activeOverlayKey = currentOverlay;
+                }
             } catch (e) {
             }
         }
@@ -1274,23 +1257,6 @@ function onOverlayChange(next: any) {
     initTimer = window.setTimeout(initWhenReady, 50);
 }
 
-    function onOverlayChangeDebug(v: any) {
-    const overlay = typeof v === 'string' ? v : String(v ?? '');
-    console.log('[CHD] overlay changed:', overlay);
-}
-
-function startOverlayDebug() {
-    try {
-        if (store && (store as any).on) {
-            (store as any).on('overlay', onOverlayChangeDebug);
-
-            const current = (store as any).get ? (store as any).get('overlay') : null;
-            console.log('[CHD] overlay current:', typeof current === 'string' ? current : String(current ?? ''));
-        }
-    } catch (e) {
-        console.log('[CHD] overlay debug failed', e);
-    }
-}
 
     onMount(() => {
         initWhenReady();
@@ -1427,7 +1393,11 @@ function startOverlayDebug() {
 
     <div class="mobileLine">
         <span class="k">Your elevation</span>
-        <span class="v">{Math.round(elevationMeters)} m</span>
+        {#if elevationError}
+            <span class="v elev-error">Unavailable</span>
+        {:else}
+            <span class="v">{lastClickedLat === null ? '-' : `${Math.round(elevationMeters)} m`}</span>
+        {/if}
     </div>
 
     <div class="mobileLine">
@@ -1490,7 +1460,11 @@ function startOverlayDebug() {
     <div class="infoBox" id="chdInfoBox">
         <fieldset>
             <legend>Altitude</legend>
-            <label>Your Elevation: {Math.round(elevationMeters)} m</label>
+            {#if elevationError}
+                <label>Your Elevation: <span class="elev-error">Unavailable</span></label>
+            {:else}
+                <label>Your Elevation: {lastClickedLat === null ? 'Click on the map' : `${Math.round(elevationMeters)} m`}</label>
+            {/if}
 
             {#if liveSunEnabled && liveSunAltitudeDeg > 0}
                 <label>Sun altitude: {liveSunAltitudeDeg.toFixed(1)}°</label>
@@ -1518,15 +1492,15 @@ function startOverlayDebug() {
         {:else}
             <fieldset>
                 <legend>Clouds Horizon Distance</legend>
-                <label><b>L</b> block range: between {distancesKm.lowMin.toFixed(0)} and {distancesKm.lowMax.toFixed(0)} km</label>
-                <label><b>M</b> block range: between {distancesKm.midMin.toFixed(0)} and {distancesKm.midMax.toFixed(0)} km</label>
-                <label><b>H</b> horizon from {distancesKm.high.toFixed(0)} km</label>
+                <label><b>L</b> block range: {lastClickedLat === null ? '-' : `between ${distancesKm.lowMin.toFixed(0)} and ${distancesKm.lowMax.toFixed(0)} km`}</label>
+                <label><b>M</b> block range: {lastClickedLat === null ? '-' : `between ${distancesKm.midMin.toFixed(0)} and ${distancesKm.midMax.toFixed(0)} km`}</label>
+                <label><b>H</b> horizon from: {lastClickedLat === null ? '-' : `${distancesKm.high.toFixed(0)} km`}</label>
             </fieldset>
         {/if}
 
         <fieldset>
             <legend>Sunrise and Sunset</legend>
-            <label><b>Sunrise</b>: {sunriseTime} | <b>Sunset</b>: {sunsetTime}</label>
+            <label><b>Sunrise</b>: {sunriseTime || '-'} | <b>Sunset</b>: {sunsetTime || '-'}</label>
         </fieldset>
     </div>
 
@@ -1653,6 +1627,17 @@ label {
     font-weight: 800;
     font-size: 13px;
     white-space: nowrap;
+}
+
+.elev-error {
+    color: #ff6b6b;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.placeholder-text {
+    opacity: 0.5;
+    font-style: italic;
 }
 
 /* Card 2 compact layout */
