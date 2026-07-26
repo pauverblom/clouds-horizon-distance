@@ -10,12 +10,12 @@
     const OBSERVER_HEIGHT_METERS = 1.7;
 
     const LOW_CLOUDS_MIN_METERS = 400;
-    const LOW_CLOUDS_MAX_METERS = 1200;
+    const LOW_CLOUDS_MAX_METERS = 2000;
 
     const MID_CLOUDS_MIN_METERS = 2000;
-    const MID_CLOUDS_MAX_METERS = 4000;
+    const MID_CLOUDS_MAX_METERS = 6500;
 
-    const HIGH_CLOUDS_MIN_METERS = 6000;
+    const HIGH_CLOUDS_MIN_METERS = 6500;
     const HIGH_CLOUDS_MAX_METERS = 12000;
 
     const EXTRA_DISTANCE_KM = 10;
@@ -33,13 +33,13 @@
     ];
 
     const CLOUD_LABEL_TEXTS = [
-        'Low Clouds 400m', 'Low Clouds 1200m',
-        'Mid Clouds 2000m', 'Mid Clouds 4000m',
-        'High clouds 6000m', 'High clouds 12000m',
+        'Low Clouds 400m', 'Low Clouds 2000m',
+        'Mid Clouds 2000m', 'Mid Clouds 6500m',
+        'High Clouds 6500m', 'High Clouds 12000m',
     ];
 
-    const LABEL_AZIMUTH_DEG = 0;
-    const LABEL_OFFSET_KM   = 2;
+    const LABEL_AZIMUTHS_DEG = [0, 0, 180, 180, 0, 0];
+    const LABEL_OFFSET_KM   = 0;
 
     const CURRENT_SUN_LINE_WEIGHT = 2;
     const CURRENT_SUN_COLOR_SUNRISE = '#ffff00';
@@ -356,7 +356,7 @@
 
         const addLabel = (distanceKm: number, text: string, styleIndex: number) => {
             const labelDistanceKm = distanceKm + LABEL_OFFSET_KM;
-            const labelPos = computeEndPoint(lat, lon, LABEL_AZIMUTH_DEG, labelDistanceKm);
+            const labelPos = computeEndPoint(lat, lon, LABEL_AZIMUTHS_DEG[styleIndex], labelDistanceKm);
 
             const anchorMarker = makeMarker(labelPos, {
                 interactive: false,
@@ -748,33 +748,13 @@ function onOverlayChange(next: any) {
 
 {#if isMobileOrTablet}
 
-    <div id="chdInfoBox" class="plugin__content">
+    <div id="chdInfoBox" class="mobileBox">
         <!-- MOBILE UI -->
-        <div class="mobileWrap">
+        <div class="mobileScroll">
 
-            <!-- Card 1: Altitudine & Base -->
-            <section class="mobileCard mobileCardNarrow">
-                <div class="mobileLine">
-                    <span class="k">Your elevation</span>
-                    <span class="v">
-                        {#if elevationError}
-                            <span class="elev-error">Unavailable</span>
-                        {:else}
-                            {lastClickedLat === null ? 'Tap map' : `${Math.round(elevationMeters)}m`}
-                        {/if}
-                    </span>
-                </div>
-                <div class="mobileLine">
-                    <span class="k">Sun altitude</span>
-                    <span class="v">
-                        {lastClickedLat === null ? 'Tap map' : `${liveSunAltitudeDeg.toFixed(1)}°`}
-                    </span>
-                </div>
-            </section>
-
-            <!-- Card 2: Distanze nubi -->
+            <!-- Card 1: Clouds Horizon Distance -->
             <section class="mobileCard mobileCardWide">
-                <div class="mobileCardTitle">Clouds Horizon Distance</div>
+                <div class="mobileTitle">Clouds Horizon Distance</div>
         
                 {#if showLow || showMid}
                     <div class="mobileLineTwoCols">
@@ -823,8 +803,30 @@ function onOverlayChange(next: any) {
                 {/if}
             </section>
 
-            <!-- Card 3: Alba / Tramonto -->
+            <!-- Card 2: Altitude -->
             <section class="mobileCard mobileCardNarrow">
+                <div class="mobileTitle">Altitude</div>
+                <div class="mobileLine">
+                    <span class="k">Your elevation</span>
+                    <span class="v">
+                        {#if elevationError}
+                            <span class="elev-error">Unavailable</span>
+                        {:else}
+                            {lastClickedLat === null ? 'Tap map' : `${Math.round(elevationMeters)}m`}
+                        {/if}
+                    </span>
+                </div>
+                <div class="mobileLine">
+                    <span class="k">Sun altitude</span>
+                    <span class="v">
+                        {lastClickedLat === null ? 'Tap map' : `${liveSunAltitudeDeg.toFixed(1)}°`}
+                    </span>
+                </div>
+            </section>
+
+            <!-- Card 3: Sunrise & Sunset -->
+            <section class="mobileCard mobileCardNarrow">
+                <div class="mobileTitle">Sunrise and Sunset</div>
                 <div class="mobileLine">
                     <span class="k">Sunrise</span>
                     <span class="v">{sunriseTime || 'n/a'}</span>
@@ -835,22 +837,24 @@ function onOverlayChange(next: any) {
                 </div>
             </section>
 
+            <!-- Card 4: Time Controls -->
+            <section class="mobileCard mobileCardNarrow">
+                <div class="mobileTitle">Time Navigation</div>
+                <div class="chd-time-bar">
+                    <button type="button" class="chd-time-btn" on:click={() => shiftTime(-1)} title="Decrease 1 minute" aria-label="Decrease 1 minute">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
+                    <span class="chd-time-text">{formattedTime}</span>
+                    <button type="button" class="chd-time-btn" on:click={() => shiftTime(1)} title="Increase 1 minute" aria-label="Increase 1 minute">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    </button>
+                </div>
+            </section>
 
-        </div>
-
-        <!-- Time Control Bar (Mobile) -->
-        <div class="chd-time-bar">
-            <button type="button" class="chd-time-btn" on:click={() => shiftTime(-1)} title="Decrease 1 minute" aria-label="Decrease 1 minute">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-            </button>
-            <span class="chd-time-text">{formattedTime}</span>
-            <button type="button" class="chd-time-btn" on:click={() => shiftTime(1)} title="Increase 1 minute" aria-label="Increase 1 minute">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-            </button>
         </div>
     </div>
 
@@ -882,32 +886,37 @@ function onOverlayChange(next: any) {
         </fieldset>
 
         <!-- Time Control Bar (Desktop) -->
-        <div class="chd-time-bar">
-            <button type="button" class="chd-time-btn" on:click={() => shiftTime(-1)} title="Decrease 1 minute" aria-label="Decrease 1 minute">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="15 18 9 12 15 6"></polyline>
-                </svg>
-            </button>
-            <span class="chd-time-text">{formattedTime}</span>
-            <button type="button" class="chd-time-btn" on:click={() => shiftTime(1)} title="Increase 1 minute" aria-label="Increase 1 minute">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="9 18 15 12 9 6"></polyline>
-                </svg>
-            </button>
-        </div>
+        <fieldset>
+            <legend>Time Navigation</legend>
+            <div class="chd-time-bar">
+                <button type="button" class="chd-time-btn" on:click={() => shiftTime(-1)} title="Decrease 1 minute" aria-label="Decrease 1 minute">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                    </svg>
+                </button>
+                <span class="chd-time-text">{formattedTime}</span>
+                <button type="button" class="chd-time-btn" on:click={() => shiftTime(1)} title="Increase 1 minute" aria-label="Increase 1 minute">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </fieldset>
     </section>
 
 {/if}
 
 <style>
-    :global(#plugin-windy-plugin-horizon-distance) {
+    :global(#plugin-windy-plugin-horizon-distance),
+    :global(#plugin-windy-plugin-horizon-distance-fork),
+    :global([id^="plugin-windy-plugin-horizon-distance"]) {
         height: auto !important;
         min-height: min-content !important;
         max-height: none !important;
         overflow: visible !important;
         position: relative !important;
         z-index: 9999 !important;
-        margin-bottom: 15px !important;
+        margin-bottom: 10px !important;
     }
 
     .plugin__content {
@@ -915,7 +924,7 @@ function onOverlayChange(next: any) {
         min-height: min-content !important;
         max-height: none !important;
         overflow: visible !important;
-        padding: 10px 12px !important;
+        padding: 10px 12px 10px 12px !important;
         box-sizing: border-box !important;
         display: block !important;
         position: relative !important;
@@ -1147,12 +1156,14 @@ function onOverlayChange(next: any) {
     align-items: center;
     justify-content: center;
     gap: 10px;
-    margin-top: 8px;
+    margin-top: 12px;
+    margin-bottom: 10px;
     padding: 6px 12px;
     background: rgba(0, 0, 0, 0.3);
     border: 1px solid rgba(255, 255, 255, 0.2);
     border-radius: 10px;
     box-sizing: border-box;
+    width: 100%;
 }
 
 .chd-time-btn {
