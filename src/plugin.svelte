@@ -72,6 +72,33 @@
     // Live Sun values for the info box
     let liveSunAltitudeDeg = 0;
 
+    let currentTimestampMs: number = Date.now();
+
+    function formatTimeHHMM(ts: number): string {
+        if (!ts || isNaN(ts)) return '--:--';
+        const d = new Date(ts);
+        const hours = d.getHours().toString().padStart(2, '0');
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        return `${hours}:${minutes}`;
+    }
+
+    $: formattedTime = formatTimeHHMM(currentTimestampMs);
+
+    function shiftTime(deltaMinutes: number) {
+        const newTs = currentTimestampMs + deltaMinutes * 60 * 1000;
+        currentTimestampMs = newTs;
+
+        if (store && (store as any).set) {
+            try {
+                (store as any).set('timestamp', newTs);
+            } catch (e) {
+                console.warn('Could not update Windy store timestamp', e);
+            }
+        }
+
+        scheduleSunUpdate(newTs);
+    }
+
     let horizonCircles: any[] = [];
     let labels: any[] = [];
     let currentSunLine: any = null;
@@ -626,7 +653,13 @@ function onOverlayChange(next: any) {
 }
 
     function onTimestampChange(ts: any) {
-        scheduleSunUpdate(ts);
+        if (typeof ts === 'number' && !isNaN(ts)) {
+            currentTimestampMs = ts;
+        } else if (ts) {
+            const parsed = new Date(ts).getTime();
+            if (!isNaN(parsed)) currentTimestampMs = parsed;
+        }
+        scheduleSunUpdate(currentTimestampMs);
     }
 
     function initWhenReady() {
@@ -650,6 +683,11 @@ function onOverlayChange(next: any) {
                 const currentOverlay = (store as any).get ? (store as any).get('overlay') : null;
                 if (typeof currentOverlay === 'string' && currentOverlay) {
                     activeOverlayKey = currentOverlay;
+                }
+
+                const initialTs = (store as any).get ? (store as any).get('timestamp') : null;
+                if (typeof initialTs === 'number' && !isNaN(initialTs)) {
+                    currentTimestampMs = initialTs;
                 }
             } catch (e) {
             }
@@ -799,6 +837,21 @@ function onOverlayChange(next: any) {
 
 
         </div>
+
+        <!-- Time Control Bar (Mobile) -->
+        <div class="chd-time-bar">
+            <button type="button" class="chd-time-btn" on:click={() => shiftTime(-1)} title="Decrease 1 minute" aria-label="Decrease 1 minute">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <span class="chd-time-text">{formattedTime}</span>
+            <button type="button" class="chd-time-btn" on:click={() => shiftTime(1)} title="Increase 1 minute" aria-label="Increase 1 minute">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+        </div>
     </div>
 
 {:else}
@@ -827,6 +880,21 @@ function onOverlayChange(next: any) {
             <legend>Sunrise and Sunset</legend>
             <label><b>Sunrise</b>: {sunriseTime || '-'} | <b>Sunset</b>: {sunsetTime || '-'}</label>
         </fieldset>
+
+        <!-- Time Control Bar (Desktop) -->
+        <div class="chd-time-bar">
+            <button type="button" class="chd-time-btn" on:click={() => shiftTime(-1)} title="Decrease 1 minute" aria-label="Decrease 1 minute">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <span class="chd-time-text">{formattedTime}</span>
+            <button type="button" class="chd-time-btn" on:click={() => shiftTime(1)} title="Increase 1 minute" aria-label="Increase 1 minute">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+        </div>
     </section>
 
 {/if}
@@ -1071,5 +1139,56 @@ function onOverlayChange(next: any) {
 .mobileButtonsStack button.activeBtn {
     background: rgba(255, 165, 0, 0.55);
     border-color: rgba(255, 255, 255, 0.35);
+}
+
+/* Time Navigation Bar */
+.chd-time-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    box-sizing: border-box;
+}
+
+.chd-time-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.chd-time-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+.chd-time-btn:active {
+    transform: scale(0.92);
+    background: rgba(255, 165, 0, 0.5);
+}
+
+.chd-time-text {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.6px;
+    color: #ffd700;
+    min-width: 48px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    font-family: inherit;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 </style>

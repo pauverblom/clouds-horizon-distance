@@ -1,7 +1,7 @@
 {
-    "name": "windy-plugin-template",
-    "version": "3.0.0",
-    "description": "Template for developing Windy Plugins",
+    "name": "windy-plugin-horizon-distance-fork",
+    "version": "0.9.6",
+    "description": "Clouds Horizon Distance plugin fork with minute-by-minute time navigation controls",
     "main": "dist/plugin.min.js",
     "type": "module",
     "scripts": {

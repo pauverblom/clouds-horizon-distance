@@ -1,11 +1,11 @@
 import type { ExternalPluginConfig } from '@windy/interfaces';
 
 const config: ExternalPluginConfig = {
-    name: 'windy-plugin-horizon-distance',
-    version: '0.9.5',  
-    title: 'Clouds Horizon Distance',
-    description: 'This plugin displays circles on the Windy map representing the horizon distances for different cloud heights, calculated based on the users clicked position, including the directions of sunrise and sunset. This allows for an approximate estimation of whether sunlight will be blocked by clouds at sunrise or sunset',
-    author: 'Francesco Gola',
+    name: 'windy-plugin-horizon-distance-fork',
+    version: '0.9.6',  
+    title: 'Clouds Horizon Distance (Custom Fork)',
+    description: 'Displays circles on the Windy map representing horizon distances for different cloud heights with 1-minute time navigation controls.',
+    author: 'Pau Verdeguer (forked from Francesco Gola)',
     icon: '☀️',  
     desktopUI: 'embedded',
     mobileUI: 'small',
